@@ -7,20 +7,25 @@ import torch.nn.functional as F
 import torch.nn as nn
 import torch.optim as optim
 
+import time
+
 #from threading import Thread   # 创建线程绘制图像
 
 
 
 #import numpy as np
 import matplotlib.pyplot as plt   # 加载图像绘制库
-# from utils.utils   # 加载工具类
+from utils.utils import Utils   # 加载工具类
 
+# 记录程序开始运行时间
+start_time = time.process_time()
 
 # 预定义参数
 batch_size = 32   # 每批数据大小
 epoch = 10
 
 # transforms parameters
+param_trans_RandomCrop, param_trans_RandomCrop_padding = 40, 4
 param_trans_Resize = (224, 224)
 param_trans_RandomHorizontalFlip = 0.5   # 随机水平翻转
 param_trans_Normalize1, param_trans_Normalize2 = (0.485, 0.456, 0.406), (0.229, 0.224, 0.225)   # 归一化
@@ -32,7 +37,7 @@ param_optim_momentum = 0.9   # 越大越偏向历史梯度，越小越偏向当�
 
 # 数据预处理
 transform = transforms.Compose([
-    #transforms.RandomCrop(40, padding=4),   # 随机裁剪
+    transforms.RandomCrop(param_trans_RandomCrop, padding = param_trans_RandomCrop_padding),   # 随机裁剪
     transforms.Resize(param_trans_Resize),
     transforms.RandomHorizontalFlip(p = param_trans_RandomHorizontalFlip),
     transforms.ToTensor(),
@@ -54,14 +59,14 @@ print('stage 1 successfully...')
 
 
 # 2. 设计模型
-model = models.resnet18()   # 加载resnet18模型
+#model = models.resnet18()   # 加载resnet18模型
 #model = models.resnet18(weights = models.ResNet18_Weights.DEFAULT)   # 加载resnet18模型
 """
 pretrained是旧版本写法
 新版本为weights = models.ResNet101_Weights.DEFAULT
 例如：models.resnet101(weights = models.ResNet101_Weights.DEFAULT)
 """
-#model = models.resnet50()   # 加载resnet50模型，参数pretrained可设置预训练参数
+model = models.resnet50(weights = models.ResNet50_Weights.DEFAULT)   # 加载resnet50模型，参数pretrained可设置预训练参数
 #model = models.resnet101()
 inchannel = model.fc.in_features
 model.fc = nn.Linear(inchannel, 10)   # 将原来的ResNet18的最后两层全连接层拿掉,替换成一个输出单元为10的全连接层
@@ -102,13 +107,15 @@ def draw_data(_x_label, _x_list, _y_label, _y_list, _z_label = '', acc_list = []
             plt.text(x, z + 0.01, '%.2f' % z, ha = 'center', va = 'bottom', fontsize = 12)
     plt.xlabel(_x_label)
     plt.ylabel(f'{_y_label} / {_z_label}')
-    plt.title(f'batch_size={batch_size} \n \
-epoch={epoch} \n \
-resize={param_trans_Resize} \n \
-Normalize={(param_trans_Normalize1, param_trans_Normalize2)} \n \
-RandomHorizontalFlip={param_trans_RandomHorizontalFlip} \n \
-lr={learning_rate} \n \
-momentum={param_optim_momentum}')
+    plt.title(Utils.get_title(batch_size=batch_size,
+                epoch=epoch,
+                RandomCrop=f'({param_trans_RandomCrop}, padding={param_trans_RandomCrop_padding})',
+                Resize=param_trans_Resize,
+                Normalize=(param_trans_Normalize1, param_trans_Normalize2),
+                RandomHorizontalFlip=param_trans_RandomHorizontalFlip,
+                lr=learning_rate,
+                momentum=param_optim_momentum,
+                ))
     plt.grid(True)
     # 标出数据点
     for x, y in zip(_x_list, _y_list):
@@ -187,10 +194,15 @@ def test():
 
 train(epoch, 10)
 
-draw_data('Epoch', epoch_list, 'Loss', loss_list, 'Accuracy', accuracy_list)   # 绘制数据图像
 
 print('stage 4 successfully...')
 
+# 记录结束运行时间
+end_time = time.process_time()
+
+print('此次运行总耗时: ', round(end_time - start_time, 3), '秒')
+
+draw_data('Epoch', epoch_list, 'Loss', loss_list, 'Accuracy', accuracy_list)   # 绘制数据图像
 
 
 
